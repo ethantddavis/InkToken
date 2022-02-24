@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
-contract RentToken is ERC20, Ownable, Pausable {
+contract InkToken is ERC20, Ownable, Pausable {
 
     //TODO uint256 constant public MAX_SUPPLY = 132407400 ether; 
 	uint256 constant public INTERVAL = 86400; 
