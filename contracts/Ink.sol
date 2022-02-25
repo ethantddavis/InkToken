@@ -47,13 +47,13 @@ contract InkToken is ERC20, Ownable, Pausable {
         return lastUpdate[user];
     }
 
-    // return the number of LandDao NFTs user owns
+    // return the number of SBC NFTs user owns
     function getNFTBalance(address user) public view returns (uint256) {
 
         return NFTContract.balanceOf(user);
     }
 
-    // returns the LandDao NFT token IDs user owns
+    // returns the SBC NFT token IDs user owns
     function getNFTIds(address user) public view returns (uint256[] memory _tokensOfOwner) {
         _tokensOfOwner = new uint256[](getNFTBalance(user));
 
@@ -62,22 +62,12 @@ contract InkToken is ERC20, Ownable, Pausable {
         }
     }
     
-    // TODO
+    // DID
     function getPendingReward(address user) public view returns(uint256) { 
-        uint256 dailyReward = 0;
-        uint256[] memory NFTIds = getNFTIds(user);
-        
-        // sum each daily NFT reward owned by user
-        for (uint256 i = 0; i < getNFTBalance(user); i++) { 
-            require(isProved(NFTIds[i]), "Make sure your NFTs have been initalized by calling isProved(ID)");
-
-            dailyReward = dailyReward + (NFTReward[NFTIds[i]]); 
-        }
-
         // (block.timestamp - lastUpdate[user]) / INTERVAL = number of days
-        // dailyReward = sum of each NFT daily reward
+        // NFTReward = sum of each NFT daily reward
         // 1 ether = 1000000000000000000
-        return (dailyReward * 1 ether * (block.timestamp - lastUpdate[user])) / INTERVAL;
+        return NFTContract.balanceOf(user) * (NFTReward * 1 ether * (block.timestamp - lastUpdate[user])) / INTERVAL;
     }
 
     /* * * * * * * * * * * * * * * USER GAS FUNCTIONS * * * * * * * * * * * * * * */
@@ -105,10 +95,12 @@ contract InkToken is ERC20, Ownable, Pausable {
         }
 	}
 
-    // TODO
+    // DID
     function claimReward() external whenNotPaused { 
-        require(totalSupply() < MAX_SUPPLY, "RENT collection is over"); // RENT earned will not be claimable after max RENT has been minted
-        require(lastUpdate[msg.sender] != 0, "If you have a LAND token, call startEarningRent"); 
+        require(totalSupply() < MAX_SUPPLY, "INK collection is over"); // INK earned will not be claimable after max INK has been minted
+        
+        // we don't need this right? don't want to remove until this is confirmed
+        // require(lastUpdate[msg.sender] != 0, "If you have a LAND token, call startEarningRent"); 
  
         uint256 currentReward = getPendingReward(msg.sender);
 
