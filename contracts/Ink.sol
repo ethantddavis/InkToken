@@ -10,7 +10,7 @@ contract InkToken is ERC20, Ownable, Pausable {
 
     uint256 constant public MAX_SUPPLY = 132407400 ether; // TODO correct value 
 	uint256 constant public INTERVAL = 86400; 
-    uint256 constant public NFTReward = 5 ether;
+    uint256 constant public NFTReward = 5;
 
 	mapping(address => uint256) private lastUpdate; // record when user interacts with contract
 
@@ -53,35 +53,32 @@ contract InkToken is ERC20, Ownable, Pausable {
         return NFTContract.balanceOf(user);
     }
 
-    // returns the SBC NFT token IDs user owns
-    function getNFTIds(address user) public view returns (uint256[] memory _tokensOfOwner) {
-        _tokensOfOwner = new uint256[](getNFTBalance(user));
-
-        for (uint256 i = 0; i < getNFTBalance(user); i++) { 
-            _tokensOfOwner[i] = NFTContract.tokenOfOwnerByIndex(user, i);
-        }
-    }
-    
-    // returns the entire reward a user will recieve when the claim
+    // returns the entire reward a user will recieve when they claim
     function getPendingReward(address user) public view returns(uint256) { 
         // (block.timestamp - lastUpdate[user]) / INTERVAL = number of days
-        // NFTReward = each NFT daily reward
+        // getNFTBalance(user) * NFTReward = cumulative daily reward for user
         // 1 ether = 1000000000000000000
-        return getNFTBalance(user) * (NFTReward * 1 ether * (block.timestamp - lastUpdate[user])) / INTERVAL;
+        return (getNFTBalance(user) * NFTReward) * (1 ether * (block.timestamp - lastUpdate[user])) / INTERVAL;
     }
 
     /* * * * * * * * * * * * * * * USER GAS FUNCTIONS * * * * * * * * * * * * * * */
 
-    // called on transfers AND mint
-	function updateReward(address from, address to) external whenNotPaused {
-		require(msg.sender == address(NFTContract));
+    // called on transfers, mint, burn by nft contract
+	function updateReward(address from, address to) external {
+		require(msg.sender == address(NFTContract), "Only SBC contract can call this function");
         uint256 time = block.timestamp;
 
         // pay out final rewards to previous holder
         if (from != address(0)) { 
 
             pay(from, getPendingReward(from));
-            lastUpdate[from] = time;
+            
+            if (getNFTBalance(from) > 1) { // determine wether NFT sender will have any left after transfer
+                lastUpdate[from] = time;
+            } else {
+                lastUpdate[from] = 0;
+            }
+            
         }
         // pay out pending rewards to NFT reciever
         if (to != address(0)) { 
