@@ -76,7 +76,6 @@ contract InkToken is ERC20, Ownable, Pausable {
 	function updateReward(address from, address to) external whenNotPaused {
 		require(msg.sender == address(NFTContract));
         uint256 time = block.timestamp;
-        uint256 senderLastUpdate = lastUpdate[from];
 
         // pay out final rewards to previous holder
         if (from != address(0)) { 
@@ -98,7 +97,7 @@ contract InkToken is ERC20, Ownable, Pausable {
     // pay out the holder
     function claimReward() external whenNotPaused { 
         require(totalSupply() < MAX_SUPPLY, "INK collection is over"); // INK earned will not be claimable after max INK has been minted
-        require(getNFTBalance(user) > 0, "You must own a SBC NFT to claim rewards");
+        require(getNFTBalance(msg.sender) > 0, "You must own a SBC NFT to claim rewards");
         require(lastUpdate[msg.sender] != 0, "ERROR, rewards not updating properly"); 
  
         uint256 currentReward = getPendingReward(msg.sender);

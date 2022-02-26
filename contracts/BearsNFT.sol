@@ -37,7 +37,7 @@ contract SadBearsClub is ERC721, Ownable {
   mapping(address => bool) public Burned;
 
   // ADDED CODE
-  Ink public ink;
+  InkToken public ink;
 
   constructor() ERC721("Sad Bears Club", "SBC") {
     setHiddenMetadataUri("ipfs://QmewVS81BNac8SghgkbEr7bTTUqxXa6MrXw6gvvJGsqjBL/unrevealed.json");
@@ -45,7 +45,7 @@ contract SadBearsClub is ERC721, Ownable {
 
   // ADDED CODE
   function setYieldToken(address _inkAddress) external onlyOwner {
-	  ink = Ink(_inkAddress);
+	  ink = InkToken(_inkAddress);
   }
 
   modifier mintCompliance(uint256 _mintAmount) {
