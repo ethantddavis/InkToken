@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 
 contract InkToken is ERC20, Ownable, Pausable {
 
-    //TODO uint256 constant public MAX_SUPPLY = 132407400 ether; 
+    uint256 constant public MAX_SUPPLY = 132407400 ether; // TODO correct value 
 	uint256 constant public INTERVAL = 86400; 
     uint256 constant public NFTReward = 5 ether;
 
@@ -62,12 +62,12 @@ contract InkToken is ERC20, Ownable, Pausable {
         }
     }
     
-    // DID
+    // returns the entire reward a user will recieve when the claim
     function getPendingReward(address user) public view returns(uint256) { 
         // (block.timestamp - lastUpdate[user]) / INTERVAL = number of days
-        // NFTReward = sum of each NFT daily reward
+        // NFTReward = each NFT daily reward
         // 1 ether = 1000000000000000000
-        return NFTContract.balanceOf(user) * (NFTReward * 1 ether * (block.timestamp - lastUpdate[user])) / INTERVAL;
+        return getNFTBalance(user) * (NFTReward * 1 ether * (block.timestamp - lastUpdate[user])) / INTERVAL;
     }
 
     /* * * * * * * * * * * * * * * USER GAS FUNCTIONS * * * * * * * * * * * * * * */
@@ -95,12 +95,11 @@ contract InkToken is ERC20, Ownable, Pausable {
         }
 	}
 
-    // DID
+    // pay out the holder
     function claimReward() external whenNotPaused { 
         require(totalSupply() < MAX_SUPPLY, "INK collection is over"); // INK earned will not be claimable after max INK has been minted
-        
-        // we don't need this right? don't want to remove until this is confirmed
-        // require(lastUpdate[msg.sender] != 0, "If you have a LAND token, call startEarningRent"); 
+        require(getNFTBalance(user) > 0, "You must own a SBC NFT to claim rewards");
+        require(lastUpdate[msg.sender] != 0, "ERROR, rewards not updating properly"); 
  
         uint256 currentReward = getPendingReward(msg.sender);
 

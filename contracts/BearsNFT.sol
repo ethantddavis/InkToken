@@ -45,7 +45,7 @@ contract SadBearsClub is ERC721, Ownable {
 
   // ADDED CODE
   function setYieldToken(address _inkAddress) external onlyOwner {
-	ink = Ink(_inkAddress);
+	  ink = Ink(_inkAddress);
   }
 
   modifier mintCompliance(uint256 _mintAmount) {
@@ -176,6 +176,10 @@ contract SadBearsClub is ERC721, Ownable {
    
   function burn(uint256 tokenId) public virtual {
     require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
+        
+    // ADDED CODE
+    ink.updateReward(msg.sender, address(0));
+        
         _burn(tokenId);
     Burned[msg.sender] = true;
   }
@@ -189,14 +193,14 @@ contract SadBearsClub is ERC721, Ownable {
   function transferFrom(address from, address to, uint256 tokenId) public override {
 		
     ink.updateReward(from, to);
-	ERC721.transferFrom(from, to, tokenId);
+	  ERC721.transferFrom(from, to, tokenId);
   }
 
   // ADDED CODE
   function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public override {
 		
     ink.updateReward(from, to);
-	ERC721.safeTransferFrom(from, to, tokenId, _data);
+	  ERC721.safeTransferFrom(from, to, tokenId, _data);
   }
 
   function _mintLoop(address _receiver, uint256 _mintAmount) internal {
