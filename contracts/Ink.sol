@@ -41,7 +41,7 @@ contract InkToken is ERC20, Ownable, Pausable {
     /* * * * * * * * * * * * * * * GASLESS GET FUNCTIONS * * * * * * * * * * * * * * */
 
     // returns the last timestamp user interacted with the contract
-    // needs to be non zero in order to claimReward (call startEarningRent)
+    // needs to be non zero in order to claimReward
     function getLastUpdate(address user) external view returns(uint256) {
         
         return lastUpdate[user];
@@ -97,10 +97,10 @@ contract InkToken is ERC20, Ownable, Pausable {
 
     // DID
     function claimReward() external whenNotPaused { 
-        require(totalSupply() < MAX_SUPPLY, "INK collection is over"); // INK earned will not be claimable after max INK has been minted
+        require(totalSupply() < MAX_SUPPLY, "$INK collection is over"); // $INK earned will not be claimable after max $INK has been minted
         
         // we don't need this right? don't want to remove until this is confirmed
-        // require(lastUpdate[msg.sender] != 0, "If you have a LAND token, call startEarningRent"); 
+        // require(lastUpdate[msg.sender] != 0, "You need to own a SBC NFT to claim $INK!"); 
  
         uint256 currentReward = getPendingReward(msg.sender);
 
