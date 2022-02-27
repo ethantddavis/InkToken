@@ -1,47 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
  
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract InkToken is ERC20, Ownable, Pausable {
+contract InkToken is ERC20 {
 
-    uint256 constant public MAX_SUPPLY = 132407400 ether; // TODO correct value 
+    uint256 constant public MAX_SUPPLY = 101378750 ether;
 	uint256 constant public INTERVAL = 86400; 
     uint256 constant public NFTReward = 5;
 
 	mapping(address => uint256) private lastUpdate; // record when user interacts with contract
 
-	IERC721Enumerable public NFTContract;  
+	IERC721 public NFTContract;  
 
 	event RewardPaid(address indexed user, uint256 reward); 
  
     constructor(address NFTContractAddress) ERC20("Sad Bears Club Ink", "INK") {
 
-        NFTContract = IERC721Enumerable(NFTContractAddress);
-        pause();
+        NFTContract = IERC721(NFTContractAddress);
     }
-
-    /* * * * * * * * * * * * * * * OWNER ONLY FUNCTIONS * * * * * * * * * * * * * * */
-
-    // stop users from interacting with the contract
-    function pause() public onlyOwner { 
-
-        _pause(); 
-    }
-
-    // allow users to interact with contract
-    function unpause() public onlyOwner { 
-
-        _unpause(); 
-    } 
 
     /* * * * * * * * * * * * * * * GASLESS GET FUNCTIONS * * * * * * * * * * * * * * */
 
     // returns the last timestamp user interacted with the contract
-    // needs to be non zero in order to claimReward (call startEarningRent)
     function getLastUpdate(address user) external view returns(uint256) {
         
         return lastUpdate[user];
@@ -63,8 +45,35 @@ contract InkToken is ERC20, Ownable, Pausable {
 
     /* * * * * * * * * * * * * * * USER GAS FUNCTIONS * * * * * * * * * * * * * * */
 
+    // pay out the holder
+    function claimReward() public { 
+        require(totalSupply() < MAX_SUPPLY, "INK collection is over"); // INK earned will not be claimable after max INK has been minted
+        require(getNFTBalance(msg.sender) > 0, "You must own a SBC NFT to claim rewards");
+
+        pay(msg.sender, getPendingReward(msg.sender));
+
+        lastUpdate[msg.sender] = block.timestamp; 
+    }
+
+    /* * * * * * * * * * * * * * * HELPER FUNCTIONS * * * * * * * * * * * * * * */
+    
+    // mints the user appropriate amount of tokens
+    function pay(address user, uint256 reward) internal {
+
+        if (totalSupply() + reward <= MAX_SUPPLY) { // make sure claim does not exceed total supply
+
+            _mint(user, reward); // erc20 mint updates totalSupply
+
+        } else { // supply + rewards > max supply, so give claimer less rewards 
+            reward = MAX_SUPPLY - totalSupply();
+            _mint(user, reward);
+        }
+
+        emit RewardPaid(user, reward);
+    }
+
     // called on transfers, mint, burn by nft contract
-	function updateReward(address from, address to) external {
+	function updateReward(address from, address to) public {
 		require(msg.sender == address(NFTContract), "Only SBC contract can call this function");
         uint256 time = block.timestamp;
 
@@ -72,7 +81,7 @@ contract InkToken is ERC20, Ownable, Pausable {
         if (from != address(0)) { 
 
             pay(from, getPendingReward(from));
-            
+
             if (getNFTBalance(from) > 1) { // determine wether NFT sender will have any left after transfer
                 lastUpdate[from] = time;
             } else {
@@ -90,34 +99,4 @@ contract InkToken is ERC20, Ownable, Pausable {
             lastUpdate[to] = time;
         }
 	}
-
-    // pay out the holder
-    function claimReward() external whenNotPaused { 
-        require(totalSupply() < MAX_SUPPLY, "INK collection is over"); // INK earned will not be claimable after max INK has been minted
-        require(getNFTBalance(msg.sender) > 0, "You must own a SBC NFT to claim rewards");
-        require(lastUpdate[msg.sender] != 0, "ERROR, rewards not updating properly"); 
- 
-        uint256 currentReward = getPendingReward(msg.sender);
-
-        pay(msg.sender, currentReward);
-
-        lastUpdate[msg.sender] = block.timestamp; 
-    }
-
-    /* * * * * * * * * * * * * * * INTERNAL HELPER FUNCTIONS * * * * * * * * * * * * * * */
-    
-    // mints the user appropriate amount of tokens
-    function pay(address user, uint256 reward) internal whenNotPaused {
-
-        if (totalSupply() + reward <= MAX_SUPPLY) { // make sure claim does not exceed total supply
-
-            _mint(user, reward); // erc20 mint updates totalSupply
-
-        } else { // supply + rewards > max supply, so give claimer less rewards 
-            reward = MAX_SUPPLY - totalSupply();
-            _mint(user, reward);
-        }
-
-        emit RewardPaid(user, reward);
-    }
 }
