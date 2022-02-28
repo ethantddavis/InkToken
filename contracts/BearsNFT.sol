@@ -3,10 +3,10 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
+import "./Ink.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./Ink.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/MerkleProof.sol";
 
 
@@ -37,15 +37,18 @@ contract SadBearsClub is ERC721, Ownable {
   mapping(address => bool) public Burned;
 
   // ADDED CODE
-  Ink public ink;
+  mapping(uint256 => address) public addressBurned;
+
+  // ADDED CODE
+  InkToken public ink;
 
   constructor() ERC721("Sad Bears Club", "SBC") {
     setHiddenMetadataUri("ipfs://QmewVS81BNac8SghgkbEr7bTTUqxXa6MrXw6gvvJGsqjBL/unrevealed.json");
   }
 
   // ADDED CODE
-  function setYieldToken(address _inkAddress) external onlyOwner {
-	ink = Ink(_inkAddress);
+  function setInkAddress(address _inkAddress) external onlyOwner {
+	  ink = InkToken(_inkAddress);
   }
 
   modifier mintCompliance(uint256 _mintAmount) {
@@ -176,6 +179,11 @@ contract SadBearsClub is ERC721, Ownable {
    
   function burn(uint256 tokenId) public virtual {
     require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
+        
+    // ADDED CODE
+    ink.updateReward(msg.sender, address(0));
+    addressBurned[tokenId] = msg.sender;
+        
         _burn(tokenId);
     Burned[msg.sender] = true;
   }
@@ -187,16 +195,14 @@ contract SadBearsClub is ERC721, Ownable {
 
   // ADDED CODE
   function transferFrom(address from, address to, uint256 tokenId) public override {
-		
     ink.updateReward(from, to);
-	ERC721.transferFrom(from, to, tokenId);
+	  super.transferFrom(from, to, tokenId);
   }
 
   // ADDED CODE
   function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public override {
-		
     ink.updateReward(from, to);
-	ERC721.safeTransferFrom(from, to, tokenId, _data);
+	  super.safeTransferFrom(from, to, tokenId, _data);
   }
 
   function _mintLoop(address _receiver, uint256 _mintAmount) internal {
