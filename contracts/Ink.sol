@@ -92,7 +92,7 @@ contract InkToken is ERC20 {
         // pay out pending rewards to NFT reciever
         if (to != address(0)) { 
 
-            if ((block.timestamp - lastUpdate[to]) > 0) {
+            if (lastUpdate[to] > 0) {
 
                 pay(to, getPendingReward(to));
             }
