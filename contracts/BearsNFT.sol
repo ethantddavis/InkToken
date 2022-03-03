@@ -1,12 +1,11 @@
-// SPDX-License-Identifier: MIT
 // Written by Andrew Olson
 
 pragma solidity >=0.7.0 <0.9.0;
 
-import "./Ink.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Ink.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/MerkleProof.sol";
 
 
@@ -23,7 +22,8 @@ contract SadBearsClub is ERC721, Ownable {
   uint256 public cost = 0.2 ether;
   uint256 public maxSupply = 5555;
   uint256 public maxMintAmountPerTx = 5;
-  uint256 public nftPerAddressLimit = 5;
+  uint256 public whitelistAddressLimit = 2;
+  uint256 public publicAddressLimit = 5;
   
 
 
@@ -33,30 +33,25 @@ contract SadBearsClub is ERC721, Ownable {
   bool public revealed = false;
   bool public publicMint = false;
 
-  mapping(address => uint256) public addressMintedBalance;
+  mapping(address => uint256) public whitelistMintedBalance;
+  mapping(address => uint256) public publicMintedBalance;
   mapping(address => bool) public Burned;
-
-  // ADDED CODE
   mapping(uint256 => address) public addressBurned;
 
-  // ADDED CODE
   InkToken public ink;
 
   constructor() ERC721("Sad Bears Club", "SBC") {
     setHiddenMetadataUri("ipfs://QmewVS81BNac8SghgkbEr7bTTUqxXa6MrXw6gvvJGsqjBL/unrevealed.json");
   }
 
-  // ADDED CODE
-  function setInkAddress(address _inkAddress) external onlyOwner {
+
+  function setYieldToken(address _inkAddress) external onlyOwner {
 	  ink = InkToken(_inkAddress);
   }
 
   modifier mintCompliance(uint256 _mintAmount) {
     require(_mintAmount > 0 && _mintAmount <= maxMintAmountPerTx, "Invalid mint amount!");
     require(supply.current() + _mintAmount <= maxSupply, "Max supply exceeded!");
-    uint256 ownerMintedAmount = addressMintedBalance[msg.sender];
-    require(ownerMintedAmount + _mintAmount <= nftPerAddressLimit, "max NFT per address exceeded");
-
     _;
   }
 
@@ -68,6 +63,9 @@ contract SadBearsClub is ERC721, Ownable {
     require(!paused, "The contract is paused!");
     require(publicMint == false, "The public mint is live.");
     require(msg.value >= cost * _mintAmount, "Insufficient funds.");
+    whitelistMintedBalance[msg.sender] += _mintAmount;
+    uint256 whitelistMintedAmount = whitelistMintedBalance[msg.sender];
+    require(whitelistMintedAmount <= whitelistAddressLimit, "max NFT per address exceeded");
     bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
     require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), "Invalid proof.");
    
@@ -78,6 +76,9 @@ contract SadBearsClub is ERC721, Ownable {
     require(publicMint == true, "The whitelist mint is live.");
     require(!paused, "The contract is paused!");
     require(msg.value >= cost * _mintAmount, "Insufficient funds!");
+    publicMintedBalance[msg.sender] += _mintAmount;
+    uint256 publicMintedAmount = publicMintedBalance[msg.sender];
+    require(publicMintedAmount <= publicAddressLimit, "max NFT per address exceeded");
 
     _mintLoop(msg.sender, _mintAmount);
   }
@@ -169,8 +170,12 @@ contract SadBearsClub is ERC721, Ownable {
     merkleRoot = _merkleRoot;
   }
   
-  function setNftPerAddressLimit(uint256 _limit) public onlyOwner {
-    nftPerAddressLimit = _limit;
+  function setPublicAddressLimit(uint256 _limit) public onlyOwner {
+    publicAddressLimit = _limit;
+  }
+
+   function setWhitelistAddressLimit(uint256 _limit) public onlyOwner {
+    whitelistAddressLimit = _limit;
   }
   
   function setMaxSupply(uint256 _newSupply) public onlyOwner {
@@ -180,10 +185,10 @@ contract SadBearsClub is ERC721, Ownable {
   function burn(uint256 tokenId) public virtual {
     require(_isApprovedOrOwner(_msgSender(), tokenId), "caller is not owner nor approved");
         
-    // ADDED CODE
+   
     ink.updateReward(msg.sender, address(0));
     addressBurned[tokenId] = msg.sender;
-        
+      
         _burn(tokenId);
     Burned[msg.sender] = true;
   }
@@ -192,24 +197,23 @@ contract SadBearsClub is ERC721, Ownable {
     (bool os, ) = payable(owner()).call{value: address(this).balance}("");
     require(os);
   }
-
-  // ADDED CODE
+ 
   function transferFrom(address from, address to, uint256 tokenId) public override {
+		
     ink.updateReward(from, to);
-	  super.transferFrom(from, to, tokenId);
+	  ERC721.transferFrom(from, to, tokenId);
   }
 
-  // ADDED CODE
   function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public override {
+		
     ink.updateReward(from, to);
-	  super.safeTransferFrom(from, to, tokenId, _data);
+	  ERC721.safeTransferFrom(from, to, tokenId, _data);
   }
 
   function _mintLoop(address _receiver, uint256 _mintAmount) internal {
     for (uint256 i = 0; i < _mintAmount; i++) {
       supply.increment();
 
-      // ADDED CODE
       ink.updateReward(address(0), _receiver);
 
       _safeMint(_receiver, supply.current());

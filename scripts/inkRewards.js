@@ -1,10 +1,15 @@
 
 async function buttonLogic() {
+  
+  
+  const abi = ""
+
+  const contract = ""
+
   const connectButton = document.getElementById("connectButton");
   const pendingRewards = document.getElementById("pendingRewards");
   const claim = document.getElementById("claim");
-  
-  
+
   connectButton.innerHTML = "Connecting wallet...";
 
   let account = null;
