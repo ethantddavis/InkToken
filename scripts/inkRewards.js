@@ -439,9 +439,10 @@ async function buttonLogic() {
     }
   ]
 
-  const addr = '0xad72571Cd63E1cC59d080853E6a3Edd860274bBD'; 
-  const contract = new window.web3.eth.Contract(ABI, addr);
+  web3 = new Web3(Web3.givenProvider);
 
+  const addr = '0xad72571Cd63E1cC59d080853E6a3Edd860274bBD'; 
+  const contract = new web3.eth.Contract(abi, addr);
   const connectButton = document.getElementById("connectButton");
   const pendingRewards = document.getElementById("pendingRewards");
   const claim = document.getElementById("claim");
@@ -469,6 +470,7 @@ async function buttonLogic() {
 
   if (account) {
     connectButton.innerHTML = account.substring(0, 5) + "..." + account.substring(account.length - 4, account.length);
+    displayRewards();
   } else {
     connectButton.innerHTML = "Connect wallet";
   }
@@ -478,16 +480,16 @@ async function buttonLogic() {
       .then(accs => {
         account = accs[0];
         connectButton.innerHTML = account.substring(0, 5) + "..." + account.substring(account.length - 4, account.length);
+        displayRewards();
       })
       .catch(err => connectButton.innerHTML = "Connect metamask wallet"); 
   }
 
-  // PENDING REWARDS HERE
   function displayRewards() {
-    contract.methods.getPendingRewards(account).call()
+    contract.methods.getPendingReward(account).call()
       .then( reward => { 
         console.log("reward: ", reward);
-        pendingRewards.innerHTML = reward;
+        pendingRewards.innerHTML = (Math.trunc(web3.utils.fromWei(reward) * 100) / 100).toString() + " ink";
       })
     .catch(err => connectButton.innerHTML = "");
   }
@@ -496,28 +498,25 @@ async function buttonLogic() {
     if (provider) {
       if (!account) {
         handleConnectWallet();
-        displayRewards();
       }
     } else {
       window.location = "https://metamask.io/";
     }
   })
   
-  // should be good to go...
   claim.addEventListener('click', _ => {
     if (provider) {
       if (!account) {
         handleConnectWallet();
       } else {
-        window.web3 = new Web3(window.ethereum);
-        const contract = new window.web3.eth.Contract(ABI, addr);
         
         const transData = {
-          gasLimit: 100000, // tweak this number
+          gasLimit: 100000, 
           from: account,
         }
         
         contract.methods.claimReward().send(transData);
+        pendingRewards.innerHTML = (0).toString() + " ink";
       }
     }
   })
